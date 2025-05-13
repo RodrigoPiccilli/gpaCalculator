@@ -1,117 +1,205 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-const MainContentComponent = () => {
+const GPACalculatorMenu = () => {
 
     const [addCourse, setAddCourse] = useState(false);
+    const [courseName, setCourseName] = useState("");
+    const [credits, setCredits] = useState("");
+    const [grade, setGrade] = useState("");
+    const [gpa, setGPA] = useState(-1);
+    const [courseList, setCourseList] = useState([]);
+    const [initialized, setInitialized] = useState(false);
+    const [errors, setErrors] = useState({});
 
-    // const [courseList, setCourseList] = useState([]);
+    useEffect(() => {
+        const storedCourses = sessionStorage.getItem("courses");
+        if (storedCourses) {
+            setCourseList(JSON.parse(storedCourses));
+        }
+        setInitialized(true);
+    }, []);
 
-    // const handleAddCourse = () => {
-        
-    // }
+    useEffect(() => {
+        const form = document.querySelector(".add-course-outer");
+        if (form) {
+            if (addCourse) {
+                form.classList.add("open");
+            } else {
+                form.classList.remove("open");
+                setCourseName("");
+                setCredits("");
+                setGrade("");
+                setErrors({});
+            }
+        }
+    }, [addCourse]);
+
+    function validateForm(name, credits, grade) {
+        const newErrors = {};
+        const courseNamingConvention = /^[A-Z]{3} \d{3}$/;
+        const letterGrade = [
+            "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"
+        ];
+
+        if (!courseNamingConvention.test(name)) {
+            newErrors.courseName = "Course name must be in format 'ABC 123'";
+        }
+
+        const numericCredits = parseInt(credits);
+        if (isNaN(numericCredits) || numericCredits < 1 || numericCredits > 12) {
+            newErrors.courseCredit = "Credits must be between 1 and 12";
+        }
+
+        if (!letterGrade.includes(grade)) {
+            newErrors.courseGrade = "Grade must be a valid letter grade";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length > 0;
+    }
+
+    const handleAddCourse = () => {
+        setErrors({});
+        if (validateForm(courseName, credits, grade)) return;
+
+        const newCourse = {
+            name: courseName,
+            credits: credits,
+            grade: grade
+        };
+
+        setCourseList(prev => [...prev, newCourse]);
+        setAddCourse(false);
+    };
+
+    useEffect(() => {
+        if (!initialized) return;
+
+        const coursePoints = {
+            "A+": 4.333,
+            "A": 4.0,
+            "A-": 3.667,
+            "B+": 3.333,
+            "B": 3.0,
+            "B-": 2.667,
+            "C+": 2.333,
+            "C": 2.0,
+            "C-": 1.667,
+            "D+": 1.333,
+            "D": 1.0,
+            "D-": 0.667,
+            "F": 0
+        };
+
+        let totalCredits = 0;
+        let totalPoints = 0;
+
+        courseList.forEach(course => {
+            totalCredits += parseFloat(course.credits);
+            totalPoints += parseFloat(course.credits) * coursePoints[course.grade];
+        });
+
+        const calculatedGPA = totalCredits > 0 ? totalPoints / totalCredits : 0;
+        setGPA(calculatedGPA);
+
+        sessionStorage.setItem("courses", JSON.stringify(courseList));
+    }, [courseList, initialized]);
 
     return (
-
         <div className="main-content">
+            <h1 id="add-course" onClick={() => setAddCourse(true)}>
+                Add Course +
+            </h1>
 
-            {!addCourse && (
-                <h1 id="add-course" onClick={() => setAddCourse(true)}>Add Course +</h1>
-            )}
-
-            {addCourse && (
-
+            <div className="add-course-outer">
                 <div className="add-course-form">
                     <h2>Add a New Course</h2>
 
+                    {errors.courseName && <p className="error-message">{errors.courseName}</p>}
+                    {errors.courseCredit && <p className="error-message">{errors.courseCredit}</p>}
+                    {errors.courseGrade && <p className="error-message">{errors.courseGrade}</p>}
+
                     <div className="add-course-fields">
-                    
                         <div className="course-label">Course Name:</div>
-                        <input className="course-input" type="text" name="courseName"/>
-
+                        <input
+                            placeholder="[PREFIX] [NUMBER]"
+                            className="course-input"
+                            type="text"
+                            value={courseName}
+                            onChange={(e) => setCourseName(e.target.value)}
+                        />
                         <div className="credits-label">Credits:</div>
-                        <select className="credits-input">
-                                <option value="" disabled selected>Select Credits</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
+                        <select
+                            className="credits-input"
+                            value={credits}
+                            onChange={(e) => setCredits(e.target.value)}
+                        >
+                            <option value="" disabled>Select Credits</option>
+                            {[...Array(12)].map((_, i) => (
+                                <option key={i + 1} value={i + 1}>{i + 1}</option>
+                            ))}
                         </select>
 
-                        <div className="grade-label">Credits:</div>
-                        <select className="grade-input">
-                                <option value="" disabled selected>Select Grade</option>
-                                <option value="A+">A+</option>
-                                <option value="A">A</option>
-                                <option value="A-">A-</option>
-                                <option value="B+">B+</option>
-                                <option value="B">B</option>
-                                <option value="B-">B-</option>
-                                <option value="C+">C+</option>
-                                <option value="C">C</option>
-                                <option value="C-">C-</option>
-                                <option value="D+">D+</option>
-                                <option value="D">D</option>
-                                <option value="D-">D-</option>
-                                <option value="F">F</option>
+                        <div className="grade-label">Grade:</div>
+                        <select
+                            className="grade-input"
+                            value={grade}
+                            onChange={(e) => setGrade(e.target.value)}
+                        >
+                            <option value="" disabled>Select Grade</option>
+                            {["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"].map(grade => (
+                                <option key={grade} value={grade}>{grade}</option>
+                            ))}
                         </select>
-
                     </div>
 
                     <div className="action-buttons">
-                        <button type="submit">Add Course</button>
-                        <button type="button" onClick={() => setAddCourse(false)}>Cancel</button>
+                        <button onClick={handleAddCourse}>Add Course</button>
+                        <button onClick={() => setAddCourse(false)}>Cancel</button>
                     </div>
-
                 </div>
-            )}
+            </div>
 
             <div className="course-list">
                 <h2>My Courses</h2>
-
-                <div>
-
-                    <table id="course-table">
-                        <thead>
-                            <tr>
-                                <th>Course Name</th>
-                                <th>Credits</th>
-                                <th>Grade</th>
-                            
-                            </tr>
-                        </thead>
+                <table id="course-table">
+                    {courseList.length > 0 ? (
+                        <>
+                            <thead>
+                                <tr>
+                                    <th>Course Name</th>
+                                    <th>Credits</th>
+                                    <th>Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {courseList.map((course, index) => (
+                                    <tr key={index}>
+                                        <td>{course.name}</td>
+                                        <td>{course.credits}</td>
+                                        <td>{course.grade}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </>
+                    ) : (
                         <tbody>
                             <tr>
-                                <td>CSC 216</td>
-                                <td>3</td>
-                                <td>A</td>
-                                
+                                <td colSpan="3">No courses added yet.</td>
                             </tr>
-
-                            <tr>
-                                <td>CSC 226</td>
-                                <td>3</td>
-                                <td>B+</td>
-                                
-                            </tr>
-                            
-
                         </tbody>
-                    </table>
-                </div>
+                    )}
+                </table>
+            </div>
 
+            <div className="gpa-display">
+                <h1>Your Cumulative GPA Is</h1>
+                {gpa > -1 && (
+                    <p>{gpa.toFixed(2)}</p>
+                )}
             </div>
         </div>
+    );
+};
 
-    )
-
-}
-
-export default MainContentComponent;
+export default GPACalculatorMenu;
